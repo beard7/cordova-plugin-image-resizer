@@ -56,6 +56,9 @@ public class ImageResizer extends CordovaPlugin {
                         JSONObject jsonObject = args.getJSONObject(0);
                         uri = jsonObject.getString("uri");
 
+                        // get the EXIF data
+                        ExifInterface originalExif = getExifInterface(uri);
+
                         isFileUri = !uri.startsWith("data") ? true : false;
 
                         folderName = null;
@@ -113,6 +116,7 @@ public class ImageResizer extends CordovaPlugin {
                         // save the image as jpeg on the device
                         if (!base64) {
                             Uri scaledFile = saveFile(bitmap);
+                            copyExif(originalExif, scaledFile.toString().replace("file://", ""), width, height);
                             response = scaledFile.toString();
                             if (scaledFile == null) {
                                 Log.e("Protonet", "There was an error saving the thumbnail");
@@ -375,4 +379,58 @@ public class ImageResizer extends CordovaPlugin {
         cache.mkdirs();
         return cache.getAbsolutePath();
     }
+
+    public static ExifInterface getExifInterface(String uriString) throws IOException {
+    ExifInterface exif = null;
+
+    if (!uriString.startsWith("data")) {
+      exif = new ExifInterface(uriString);
+    } else {
+      String pureBase64Encoded = uriString.substring(uriString.indexOf(",") + 1);
+      byte[] decodedBytes = Base64.decode(pureBase64Encoded, Base64.DEFAULT);
+      exif = new ExifInterface(new ByteArrayInputStream(decodedBytes));
+    }
+    return exif;
+  }
+
+    public void copyExif(ExifInterface originalExif, String newPath, int newWidth, int newHeight) throws IOException {
+
+    String[] attributes = new String[]
+        {
+            ExifInterface.TAG_DATETIME,
+            ExifInterface.TAG_DATETIME_DIGITIZED,
+            ExifInterface.TAG_EXPOSURE_TIME,
+            ExifInterface.TAG_FLASH,
+            ExifInterface.TAG_FOCAL_LENGTH,
+            ExifInterface.TAG_GPS_ALTITUDE,
+            ExifInterface.TAG_GPS_ALTITUDE_REF,
+            ExifInterface.TAG_GPS_DATESTAMP,
+            ExifInterface.TAG_GPS_LATITUDE,
+            ExifInterface.TAG_GPS_LATITUDE_REF,
+            ExifInterface.TAG_GPS_LONGITUDE,
+            ExifInterface.TAG_GPS_LONGITUDE_REF,
+            ExifInterface.TAG_GPS_PROCESSING_METHOD,
+            ExifInterface.TAG_GPS_TIMESTAMP,
+            ExifInterface.TAG_GPS_IMG_DIRECTION,
+            ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
+            ExifInterface.TAG_MAKE,
+            ExifInterface.TAG_MODEL,
+            ExifInterface.TAG_SOFTWARE,
+            ExifInterface.TAG_SUBSEC_TIME,
+            ExifInterface.TAG_WHITE_BALANCE
+        };
+
+    ExifInterface newExif = new ExifInterface(newPath);
+    for (int i = 0; i < attributes.length; i++) {
+      String value = originalExif.getAttribute(attributes[i]);
+      if (value != null) {
+        newExif.setAttribute(attributes[i], value);
+      }
+    }
+
+    newExif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(switchWidthAndHeightExifs ? newHeight : newWidth));
+    newExif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(switchWidthAndHeightExifs ? newWidth : newHeight));
+    newExif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
+    newExif.saveAttributes();
+  }
 }
