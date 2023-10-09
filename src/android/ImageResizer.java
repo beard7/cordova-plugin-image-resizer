@@ -118,6 +118,7 @@ public class ImageResizer extends CordovaPlugin {
                         // save the image as jpeg on the device
                         if (!base64) {
                             Uri scaledFile = saveFile(bitmap);
+                            writeExifDataToImage(exifData, scaledFile.toString().replace("file://", ""));
                             response = scaledFile.toString();
                             if (scaledFile == null) {
                                 Log.e("Protonet", "There was an error saving the thumbnail");
@@ -158,7 +159,7 @@ public class ImageResizer extends CordovaPlugin {
         return encodedImage;
     }
 
-    private static Bitmap loadBase64ScaledBitmapFromUri(String uriString, int width, int height, boolean fit, HashMap<String, String> exifData) {
+    private static Bitmap loadBase64ScaledBitmapFromUri(String uriString, int width, int height, boolean fit) {
         try {
 
             String pureBase64Encoded = uriString.substring(uriString.indexOf(",") + 1);
@@ -180,36 +181,6 @@ public class ImageResizer extends CordovaPlugin {
             }
 
             Bitmap scaled = Bitmap.createScaledBitmap(decodedBitmap, execWidth, execHeigth, true);
-
-            // Create a new bitmap with the same dimensions as the scaled bitmap
-            Bitmap newBitmap = Bitmap.createBitmap(scaled.getWidth(), scaled.getHeight(), Bitmap.Config.ARGB_8888);
-
-            // Draw the scaled bitmap onto the new bitmap using a Canvas object
-            Canvas canvas = new Canvas(newBitmap);
-            canvas.drawBitmap(scaled, 0, 0, null);
-
-            // Get the path of the app's files directory
-            File filesDir = context.getFilesDir();
-
-            // Create a new file in the app's files directory with a unique name
-            File newFile = new File(filesDir, "new_image_" + System.currentTimeMillis() + ".jpg");
-
-            // Write the new bitmap to the new file
-            FileOutputStream outputStream = new FileOutputStream(newFile);
-            newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
-            outputStream.flush();
-            outputStream.close();
-
-            // Write the EXIF data to the new image file using the ExifInterface class
-            ExifInterface exif = new ExifInterface(newFile.getAbsolutePath());
-            for (Map.Entry<String, String> entry : exifData.entrySet()) {
-                exif.setAttribute(entry.getKey(), entry.getValue());
-            }
-            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(execWidth));
-            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(execHeigth));
-            //exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
-            exif.saveAttributes();
-
 
             decodedBytes = null;
             decodedBitmap = null;
@@ -271,6 +242,27 @@ public class ImageResizer extends CordovaPlugin {
             // Handle the exception
         }
         return exifData;
+    }
+
+    public void writeExifDataToImage(String uriString, HashMap<String, String> exifData) {
+        try {
+            // Decode the image file and create a Bitmap object
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(uriString, options);
+            int imageWidth = options.outWidth;
+            int imageHeight = options.outHeight;
+
+            ExifInterface exif = new ExifInterface(uriString);
+            for (Map.Entry<String, String> entry : exifData.entrySet()) {
+                exif.setAttribute(entry.getKey(), entry.getValue());
+            }
+            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(imageWidth));
+            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(imageHeight));
+            exif.saveAttributes();
+        } catch (IOException e) {
+            // Handle the exception
+        }
     }
 
     /**
