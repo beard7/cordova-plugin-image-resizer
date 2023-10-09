@@ -182,14 +182,26 @@ public class ImageResizer extends CordovaPlugin {
             Bitmap scaled = Bitmap.createScaledBitmap(decodedBitmap, execWidth, execHeigth, true);
 
             // Create a new bitmap with the same dimensions as the scaled bitmap
-            Bitmap newBitmap = Bitmap.createBitmap(scaledBitmap.getWidth(), scaledBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+            Bitmap newBitmap = Bitmap.createBitmap(scaled.getWidth(), scaled.getHeight(), Bitmap.Config.ARGB_8888);
 
             // Draw the scaled bitmap onto the new bitmap using a Canvas object
             Canvas canvas = new Canvas(newBitmap);
-            canvas.drawBitmap(scaledBitmap, 0, 0, null);
+            canvas.drawBitmap(scaled, 0, 0, null);
+
+            // Get the path of the app's files directory
+            File filesDir = context.getFilesDir();
+
+            // Create a new file in the app's files directory with a unique name
+            File newFile = new File(filesDir, "new_image_" + System.currentTimeMillis() + ".jpg");
+
+            // Write the new bitmap to the new file
+            FileOutputStream outputStream = new FileOutputStream(newFile);
+            newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+            outputStream.flush();
+            outputStream.close();
 
             // Write the EXIF data to the new image file using the ExifInterface class
-            ExifInterface exif = new ExifInterface(newImagePath);
+            ExifInterface exif = new ExifInterface(newFile.getAbsolutePath());
             for (Map.Entry<String, String> entry : exifData.entrySet()) {
                 exif.setAttribute(entry.getKey(), entry.getValue());
             }
