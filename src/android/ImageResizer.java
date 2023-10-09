@@ -77,13 +77,17 @@ public class ImageResizer extends CordovaPlugin {
                         fit = jsonObject.optBoolean("fit", false);
                         fixRotation = jsonObject.optBoolean("fixRotation", false);
 
+                        // call the getAllExifData method to get all the EXIF data from the image
+                        HashMap<String, String> exifData = getAllExifData(uri);
+
+
                         Bitmap bitmap;
                         // load the image from uri
                         if (isFileUri) {
                             bitmap = loadScaledBitmapFromUri(uri, width, height);
 
                         } else {
-                            bitmap = ImageResizer.loadBase64ScaledBitmapFromUri(uri, width, height, fit);
+                            bitmap = ImageResizer.loadBase64ScaledBitmapFromUri(uri, width, height, fit, exifData);
                         }
 
                         if (fixRotation) {
@@ -157,7 +161,7 @@ public class ImageResizer extends CordovaPlugin {
         return encodedImage;
     }
 
-    private static Bitmap loadBase64ScaledBitmapFromUri(String uriString, int width, int height, boolean fit) {
+    private static Bitmap loadBase64ScaledBitmapFromUri(String uriString, int width, int height, boolean fit, HashMap<String, String> exifData) {
         try {
 
             String pureBase64Encoded = uriString.substring(uriString.indexOf(",") + 1);
@@ -179,6 +183,24 @@ public class ImageResizer extends CordovaPlugin {
             }
 
             Bitmap scaled = Bitmap.createScaledBitmap(decodedBitmap, execWidth, execHeigth, true);
+
+            // Create a new bitmap with the same dimensions as the scaled bitmap
+            Bitmap newBitmap = Bitmap.createBitmap(scaledBitmap.getWidth(), scaledBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+
+            // Draw the scaled bitmap onto the new bitmap using a Canvas object
+            Canvas canvas = new Canvas(newBitmap);
+            canvas.drawBitmap(scaledBitmap, 0, 0, null);
+
+            // Write the EXIF data to the new image file using the ExifInterface class
+            ExifInterface exif = new ExifInterface(newImagePath);
+            for (Map.Entry<String, String> entry : exifData.entrySet()) {
+                exif.setAttribute(entry.getKey(), entry.getValue());
+            }
+            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(execWidth);
+            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(execHeigth);
+            //exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
+            exif.saveAttributes();
+
 
             decodedBytes = null;
             decodedBitmap = null;
@@ -221,6 +243,25 @@ public class ImageResizer extends CordovaPlugin {
         } catch (IOException e) {
             return ExifInterface.ORIENTATION_NORMAL;
         }
+    }
+
+    /**
+     * Gets all the EXIF data from an image file
+     *
+     * @param uriString the URI of the image to get the EXIF data for
+     * @return a HashMap containing all the EXIF data as key-value pairs
+     */
+    private HashMap<String, String> getAllExifData(String uriString) {
+        HashMap<String, String> exifData = new HashMap<>();
+        try {
+            ExifInterface exif = new ExifInterface(uriString);
+            for (String tag : exif.getTags()) {
+                exifData.put(tag, exif.getAttribute(tag));
+            }
+        } catch (IOException e) {
+            // Handle the exception
+        }
+        return exifData;
     }
 
     /**
