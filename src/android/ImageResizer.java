@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class ImageResizer extends CordovaPlugin {
     private static final int ARGUMENT_NUMBER = 1;
@@ -118,7 +119,7 @@ public class ImageResizer extends CordovaPlugin {
                         // save the image as jpeg on the device
                         if (!base64) {
                             Uri scaledFile = saveFile(bitmap);
-                            writeExifDataToImage(exifData, scaledFile.toString().replace("file://", ""));
+                            writeExifDataToImage(scaledFile.toString().replace("file://", ""), exifData);
                             response = scaledFile.toString();
                             if (scaledFile == null) {
                                 Log.e("Protonet", "There was an error saving the thumbnail");
