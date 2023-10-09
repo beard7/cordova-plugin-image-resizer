@@ -193,8 +193,8 @@ public class ImageResizer extends CordovaPlugin {
             for (Map.Entry<String, String> entry : exifData.entrySet()) {
                 exif.setAttribute(entry.getKey(), entry.getValue());
             }
-            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(execWidth);
-            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(execHeigth);
+            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, String.valueOf(execWidth));
+            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, String.valueOf(execHeigth));
             //exif.setAttribute(ExifInterface.TAG_ORIENTATION, String.valueOf(ExifInterface.ORIENTATION_NORMAL));
             exif.saveAttributes();
 
